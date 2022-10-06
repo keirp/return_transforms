@@ -7,7 +7,6 @@ A set of methods for building MLPs with different features.
 - different number of layers
 """
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
