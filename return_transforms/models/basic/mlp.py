@@ -18,7 +18,12 @@ class MLP(nn.Module):
         self.output_size = output_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.activation = activation
+
+        if activation == 'relu':
+            self.activation = nn.ReLU
+        else:
+            raise NotImplementedError
+
         self.batchnorm = batchnorm
         self.layernorm = layernorm
         self.dropout = dropout

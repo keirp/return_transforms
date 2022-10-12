@@ -7,8 +7,8 @@ dynamics_model_args:
   layernorm: False
   dropout: 0.0
 cluster_model_args:
-  rep_size: 8
-  groups: 1
+  rep_size: 128
+  groups: 4
   obs_action_model:
     hidden_size: 512
     num_layers: 2
@@ -39,11 +39,11 @@ cluster_model_args:
     dropout: 0.0
 train_args:
   gamma: 1.0
-  scale: 5.0
+  scale: 1.0
   dynamics_model_lr: 5e-4
   cluster_model_lr: 1e-4
   batch_size: 100
-  cluster_epochs: 5
+  cluster_epochs: 4
   return_epochs: 1
   adv_loss_weight: 1.0
-  act_loss_weight: 0.01
+  act_loss_weight: 0.02

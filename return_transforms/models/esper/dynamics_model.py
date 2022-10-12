@@ -35,7 +35,7 @@ class DynamicsModel(nn.Module):
         # We don't condition on the last timestep since we don't have a next observation
         context = x[:, :-1]
         context = torch.cat([context, past_cluster[:, :-1]], dim=-1)
-        next_obs = x[:, 1:]
+        next_obs = obs[:, 1:]
 
         pred_next_obs = self.dynamics_model(
             context.view(bsz * (t - 1), -1)).view(*next_obs.shape)

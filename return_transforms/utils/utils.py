@@ -64,7 +64,8 @@ def learned_labels(traj, label_model, n_actions, horizon, device,
         padded_obs = torch.tensor(padded_obs).float().unsqueeze(0).to(device)
         padded_acts = torch.tensor(padded_acts).float().unsqueeze(0).to(device)
 
-        labels, _ = label_model.labels(padded_obs, padded_acts, hard=True)
+        labels, _ = label_model.return_preds(
+            padded_obs, padded_acts, hard=True)
         labels = labels[0, -obs.shape[0]:].view(-1).cpu().detach().numpy()
 
     return np.around(labels, decimals=1)

@@ -29,17 +29,17 @@ class ClusterModel(nn.Module):
         self.rep_size = rep_size
         self.groups = groups
 
-        hidden_size = model_args['obs_action_model']['hidden_size']
+        self.hidden_size = model_args['obs_action_model']['hidden_size']
 
         self.obs_action_model = MLP(
-            obs_size + action_size, hidden_size, **model_args['obs_action_model'])
-        self.lstm_model = nn.LSTM(hidden_size,
-                                  hidden_size,
+            obs_size + action_size, self.hidden_size, **model_args['obs_action_model'])
+        self.lstm_model = nn.LSTM(self.hidden_size,
+                                  self.hidden_size,
                                   batch_first=True)
         self.logit_model = MLP(
-            hidden_size, rep_size, **model_args['logit_model'])
+            self.hidden_size, rep_size, **model_args['logit_model'])
 
-        self.return_model = MLP(rep_size + hidden_size,
+        self.return_model = MLP(rep_size + self.hidden_size,
                                 1, **model_args['return_model'])
         self.action_model = MLP(rep_size + obs_size,
                                 action_size, **model_args['action_model'])
@@ -59,13 +59,13 @@ class ClusterModel(nn.Module):
 
         # Use LSTM to get the representations for each suffix of the sequence
         if hidden is None:
-            hidden = (torch.zeros(1, bsz, self.rep_size).to(x.device),
-                      torch.zeros(1, bsz, self.rep_size).to(x.device))
+            hidden = (torch.zeros(1, bsz, self.hidden_size).to(x.device),
+                      torch.zeros(1, bsz, self.hidden_size).to(x.device))
 
         x, hidden = self.lstm_model(obs_act_reps, hidden)
 
         # Reverse the sequence in time again
-        x = torch.flip(x, [1]).view(bsz * t, -1)
+        x = torch.flip(x, [1]).reshape(bsz * t, -1)
 
         # Pass through MLP to get logits for cluster assignment
         logits = self.logit_model(x)
@@ -79,7 +79,8 @@ class ClusterModel(nn.Module):
         clusters = clusters.view(bsz, t, -1)
 
         # ================ Compute return prediction ================
-        ret_input = torch.cat([clusters.detach(), obs_act_reps], dim=-1)
+        ret_input = torch.cat(
+            [clusters.detach(), obs_act_reps], dim=-1).view(bsz * t, -1)
 
         ret_pred = self.return_model(ret_input).view(bsz, t, -1)
 
@@ -96,3 +97,49 @@ class ClusterModel(nn.Module):
         act_pred = self.action_model(obs_context).view(bsz, t, -1)
 
         return clusters, ret_pred, act_pred, hidden
+
+    def return_preds(self, obs, action, hard=False):
+        """
+        Returns the return predictions for the given trajectories.
+        """
+        bsz, t = obs.shape[:2]
+        obs = obs.view(bsz, t, -1)
+
+        # Concatenate observations and actions
+        x = torch.cat([obs, action], dim=-1)
+
+        # Reverse the sequence in time
+        x = torch.flip(x, [1]).view(bsz * t, -1)
+
+        # Pass through MLP to get representation
+        obs_act_reps = self.obs_action_model(x).view(bsz, t, -1)
+
+        # Use LSTM to get the representations for each suffix of the sequence
+        hidden = (torch.zeros(1, bsz, self.hidden_size).to(x.device),
+                  torch.zeros(1, bsz, self.hidden_size).to(x.device))
+
+        x, hidden = self.lstm_model(obs_act_reps, hidden)
+
+        # Reverse the sequence in time again
+        x = torch.flip(x, [1]).reshape(bsz * t, -1)
+
+        # Pass through MLP to get logits for cluster assignment
+        logits = self.logit_model(x)
+
+        # Some inputs are padding (0), so we mask them out
+        logits[obs.view(bsz * t, -1).sum(-1) == 0] = 0
+
+        # Sample cluster assignment
+        logits = logits.view(bsz * t, self.groups, -1)
+        clusters = F.gumbel_softmax(logits, tau=1, hard=hard)
+        clusters = clusters.view(bsz, t, -1)
+
+        # ================ Compute return prediction ================
+        ret_input = torch.cat(
+            [clusters.detach(), obs_act_reps], dim=-1).view(bsz * t, -1)
+
+        ret_pred = self.return_model(ret_input).view(bsz, t, -1)
+
+        # ================ Compute action prediction ================
+
+        return ret_pred, clusters

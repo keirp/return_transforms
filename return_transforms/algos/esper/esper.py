@@ -35,12 +35,15 @@ def esper(trajs,
     dataset = ESPERDataset(trajs, action_size, max_len,
                            gamma=train_args['gamma'], act_type=act_type)
 
+    scale = train_args['scale']
+
     # Get the obs size from the first datapoint
     obs, _, _, _ = next(iter(dataset))
     obs_shape = obs[0].shape
     obs_size = np.prod(obs_shape)
 
     # Set up the models
+    print('Creating models...')
     dynamics_model = DynamicsModel(obs_size,
                                    action_size,
                                    cluster_model_args['rep_size'],
@@ -53,9 +56,9 @@ def esper(trajs,
                                  cluster_model_args['groups']).to(device)
 
     dynamics_optimizer = optim.AdamW(
-        dynamics_model.parameters(), lr=train_args['dynamics_model_lr'])
+        dynamics_model.parameters(), lr=float(train_args['dynamics_model_lr']))
     cluster_optimizer = optim.AdamW(
-        cluster_model.parameters(), lr=train_args['cluster_model_lr'])
+        cluster_model.parameters(), lr=float(train_args['cluster_model_lr']))
 
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=train_args['batch_size'],
@@ -64,6 +67,8 @@ def esper(trajs,
     # Calculate epoch markers
     total_epochs = train_args['cluster_epochs'] + train_args['return_epochs']
     ret_stage = train_args['cluster_epochs']
+
+    print('Training...')
 
     dynamics_model.train()
     cluster_model.train()
@@ -74,31 +79,38 @@ def esper(trajs,
         total_ret_loss = 0
         total_dyn_loss = 0
         total_baseline_dyn_loss = 0
+        total_batches = 0
         for obs, acts, ret, seq_len in pbar:
+            total_batches += 1
             # Take an optimization step for the cluster model
             cluster_optimizer.zero_grad()
             obs = obs.to(device)
             acts = acts.to(device)
-            ret = ret.to(device)
+            ret = ret.to(device) / scale
             seq_len = seq_len.to(device)
 
-            mask = (acts.sum(dim=-1) == 0)
+            bsz, t = obs.shape[:2]
+
+            act_mask = (acts.sum(dim=-1) == 0)
+            obs_mask = (obs.view(bsz, t, -1)[:, :-1].sum(dim=-1) == 0)
 
             # Get the cluster predictions
             clusters, ret_pred, act_pred, _ = cluster_model(
-                obs, acts, ret, seq_len, hard=epoch >= ret_stage)
+                obs, acts, seq_len, hard=epoch >= ret_stage)
 
             pred_next_obs, next_obs = dynamics_model(
                 obs, acts, clusters, seq_len)
 
             # Calculate the losses
-            ret_loss = ((ret_pred - ret) ** 2)[~mask].mean()
-            act_loss = act_loss_fn(act_pred, acts)[~mask].mean()
-            dynamics_loss = ((pred_next_obs - next_obs) ** 2).mean()
+
+            ret_loss = ((ret_pred.view(bsz, t) - ret.view(bsz, t)) ** 2).mean()
+            act_loss = act_loss_fn(act_pred, acts).view(bsz, t)[
+                ~act_mask].mean()
+            dynamics_loss = ((pred_next_obs - next_obs) ** 2)[~obs_mask].mean()
 
             # Calculate the total loss
             if epoch < ret_stage:
-                loss = train_args['adv_loss_weight'] * dynamics_loss + \
+                loss = -train_args['adv_loss_weight'] * dynamics_loss + \
                     train_args['act_loss_weight'] * act_loss
             else:
                 loss = ret_loss
@@ -126,16 +138,16 @@ def esper(trajs,
             total_dyn_loss += dynamics_loss.item()
             total_baseline_dyn_loss += baseline_dynamics_loss.item()
 
-            advantage = baseline_dynamics_loss.item() - dynamics_loss.item()
+            advantage = total_baseline_dyn_loss - total_dyn_loss
 
             pbar.set_description(
-                f"Epoch {epoch} | Loss: {total_loss / (len(pbar) + 1):.4f} | Act Loss: {total_act_loss / (len(pbar) + 1):.4f} | Rep Loss: {total_ret_loss / (len(pbar) + 1):.4f} | Dyn Loss: {total_dyn_loss / (len(pbar) + 1):.4f} | Adv: {advantage:.4f}")
+                f"Epoch {epoch} | Loss: {total_loss / total_batches:.4f} | Act Loss: {total_act_loss / total_batches:.4f} | Ret Loss: {total_ret_loss / total_batches:.4f} | Dyn Loss: {total_dyn_loss / total_batches:.4f} | Adv: {advantage / total_batches:.4f}")
 
     # Get the learned return labels
     avg_returns = []
-    for traj in trajs:
+    for traj in tqdm(trajs):
         labels = learned_labels(traj, cluster_model,
                                 action_size, max_len, device, act_type)
-        avg_returns.append(labels)
+        avg_returns.append(labels * scale)
 
     return avg_returns
