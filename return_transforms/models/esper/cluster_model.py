@@ -39,6 +39,8 @@ class ClusterModel(nn.Module):
         self.logit_model = MLP(
             self.hidden_size, rep_size, **model_args['logit_model'])
 
+        self.ret_obs_action_model = MLP(
+            obs_size + action_size, self.hidden_size, **model_args['ret_obs_action_model'])
         self.return_model = MLP(rep_size + self.hidden_size,
                                 1, **model_args['return_model'])
         self.action_model = MLP(rep_size + obs_size,
@@ -135,8 +137,11 @@ class ClusterModel(nn.Module):
         clusters = clusters.view(bsz, t, -1)
 
         # ================ Compute return prediction ================
+        x = torch.cat([obs, action], dim=-1)
+        ret_obs_act_reps = self.ret_obs_action_model(x).view(bsz, t, -1)
+
         ret_input = torch.cat(
-            [clusters.detach(), obs_act_reps], dim=-1).view(bsz * t, -1)
+            [clusters.detach(), ret_obs_act_reps], dim=-1).view(bsz * t, -1)
 
         ret_pred = self.return_model(ret_input).view(bsz, t, -1)
 

@@ -25,6 +25,13 @@ def load_env(env_name):
             for i in range(len(traj.obs)):
                 traj.obs[i] = traj.obs[i]['grid']
         return env, trajs
+    elif env_name == 'tfe':
+        from esper_envs.envs.offline_envs.tfe_offline_env import TFEOfflineEnv
+        tfe_ds_path = '../esper_envs/offline_data/2048_5m_4x4.ds'
+        task = TFEOfflineEnv(path=tfe_ds_path)
+        env = task.env_cls()
+        trajs = task.trajs
+        return env, trajs
     elif env_name == 'gambling':
         from esper_envs.envs.offline_envs.gambling_offline_env import GamblingOfflineEnv
         gambling_ds_path = '../esper_envs/offline_data/gambling.ds'

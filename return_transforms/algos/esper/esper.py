@@ -124,9 +124,9 @@ def esper(trajs,
                 obs, acts, clusters.detach(), seq_len)
             baseline_pred_next_obs, _ = dynamics_model(
                 obs, acts, torch.zeros_like(clusters), seq_len)
-            dynamics_loss = ((pred_next_obs - next_obs) ** 2).mean()
+            dynamics_loss = ((pred_next_obs - next_obs) ** 2)[~obs_mask].mean()
             baseline_dynamics_loss = (
-                (baseline_pred_next_obs - next_obs) ** 2).mean()
+                (baseline_pred_next_obs - next_obs) ** 2)[~obs_mask].mean()
             total_dynamics_loss = dynamics_loss + baseline_dynamics_loss
             total_dynamics_loss.backward()
             dynamics_optimizer.step()
