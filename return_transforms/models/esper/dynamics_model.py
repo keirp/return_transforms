@@ -21,7 +21,7 @@ class DynamicsModel(nn.Module):
         self.dynamics_model = MLP(
             obs_size + action_size + rep_size, obs_size, **model_args)
 
-    def forward(self, obs, action, rep, seq_len):
+    def forward(self, obs, action, cluster, seq_len):
         bsz, t = obs.shape[:2]
         obs = obs.view(bsz, t, -1)
 
@@ -30,11 +30,11 @@ class DynamicsModel(nn.Module):
         idxs = get_past_indices(x, seq_len)
         idxs = idxs.view(bsz, t, 1).expand(bsz, t, self.rep_size)
 
-        batch_rep = torch.gather(rep, 1, idxs)
+        past_cluster = torch.gather(cluster, 1, idxs)
 
         # We don't condition on the last timestep since we don't have a next observation
         context = x[:, :-1]
-        context = torch.cat([context, batch_rep[:, :-1]], dim=-1)
+        context = torch.cat([context, past_cluster[:, :-1]], dim=-1)
         next_obs = x[:, 1:]
 
         pred_next_obs = self.dynamics_model(
