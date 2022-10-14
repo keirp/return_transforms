@@ -18,7 +18,7 @@ cluster_model_args:
     dropout: 0.0
   ret_obs_action_model:
     hidden_size: 512
-    num_layers: 1
+    num_layers: 2
     activation: "relu"
     batchnorm: True
     layernorm: False
