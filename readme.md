@@ -12,13 +12,13 @@ This repository contains code for the following return transformation methods fo
 
 ## Usage
 
-`return_transforms` operates on offline RL datasets stored in the [D4RL](https://arxiv.org/abs/2004.07219) format. It saves a numpy array of the transformed returns in the specified directory.
+`return_transforms` operates on offline RL datasets. It saves a file with the transformed returns in the specified directory.
 
 To use `return_transforms` on a dataset, run the following command:
 
 ```python return_transforms/generate.py --env_name tfe --config configs/esper/tfe.yaml --device cuda --n_cpu 10 --ret_file data/tfe.ret```
 
-Then, you can use the included fork of Decision Transformer to train on the transformed returns.
+Then, you can use the included fork of Decision Transformer (in the `decision_transformer` directory) to train on the transformed returns.
 
 ```python experiment.py --env tfe --dataset default -w True --max_iters 2 --num_steps_per_iter 25000 --rtg ../data/tfe.ret```
 
