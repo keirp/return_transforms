@@ -7,6 +7,7 @@ This repository contains code for the following return transformation methods fo
 
 - Install `stochastic_offline_envs` from [here](https://github.com/keirp/stochastic_offline_envs).
 - Install dependencies with `pip install -r requirements.txt`.
+- Make sure pytorch >= 1.10 is installed.
 - Install the package with `pip install -e .`.
 - [Optional] Install the included `decision_transformer` package. This is only necessary if you want to use the transformed returns with the included modified decision transformer implementation.
 

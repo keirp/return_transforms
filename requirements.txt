@@ -3,5 +3,4 @@ gym==0.19.0
 numpy==1.21.4
 PyYAML==6.0
 setuptools==63.4.1
-torch==1.10.0
 tqdm==4.62.3
