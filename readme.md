@@ -21,3 +21,5 @@ To use `return_transforms` on a dataset, run the following command:
 Then, you can use the included fork of Decision Transformer to train on the transformed returns.
 
 ```python experiment.py --env tfe --dataset default -w True --max_iters 2 --num_steps_per_iter 25000 --rtg ../data/tfe.ret```
+
+Configurations are included for all included `stochastic_offline_envs` in the `configs/esper` directory.
