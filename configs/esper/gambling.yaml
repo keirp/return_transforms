@@ -1,4 +1,5 @@
 method: esper
+normalize: false
 dynamics_model_args:
   hidden_size: 512
   num_layers: 2
