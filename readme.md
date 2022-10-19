@@ -9,7 +9,7 @@ This repository contains code for the following return transformation methods fo
 - Install dependencies with `pip install -r requirements.txt`.
 - Make sure pytorch >= 1.10 is installed.
 - Install the package with `pip install -e .`.
-- [Optional] Install the included `decision_transformer` package. This is only necessary if you want to use the transformed returns with the included modified decision transformer implementation.
+- Install the included `decision_transformer` package. This is only necessary if you want to use the transformed returns with the included modified decision transformer implementation.
 
 ## Instructions for Decision Transformer
 - Run `download_esper_datasets.py` to save the`stochastic_offline_envs` datasets in a format that Decision Transformer understands.
