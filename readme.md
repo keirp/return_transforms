@@ -11,6 +11,10 @@ This repository contains code for the following return transformation methods fo
 - Install the package with `pip install -e .`.
 - [Optional] Install the included `decision_transformer` package. This is only necessary if you want to use the transformed returns with the included modified decision transformer implementation.
 
+## Instructions for Decision Transformer
+- Run `download_esper_datasets.py` to save the`stochastic_offline_envs` datasets in a format that Decision Transformer understands.
+- Use the `--rtg path/to/returns` flag to use the generated returns or leave it out to use the original returns.
+
 ## Usage
 
 `return_transforms` operates on offline RL datasets. It saves a file with the transformed returns in the specified directory.
